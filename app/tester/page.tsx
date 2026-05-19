@@ -24,7 +24,7 @@ function makeInitialTabStates(): Record<ApiTab, TabState> {
 
 export default function TesterPage() {
   const [baseUrl, setBaseUrl] = useState(
-    process.env.NEXT_PUBLIC_DEFAULT_API_URL ?? "http://localhost:2001"
+    process.env.NEXT_PUBLIC_DEFAULT_API_URL ?? "https://qa.sc.superceuticals.in"
   );
   const [token, setToken] = useState(
     process.env.NEXT_PUBLIC_DEFAULT_TOKEN ?? ""
