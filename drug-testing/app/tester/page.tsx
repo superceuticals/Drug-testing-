@@ -60,7 +60,7 @@ export default function TesterPage() {
   }, []);
 
   const sendRequest = useCallback(
-    async (tab: ApiTab, query: string, disease: string) => {
+    async (tab: ApiTab, query: string, disease: string, doctorId: string, force: boolean) => {
       const meta = TAB_META[tab];
 
       if (!token.trim()) {
@@ -75,6 +75,8 @@ export default function TesterPage() {
       const params: Record<string, string> = {};
       if (meta.hasQuery && query) params.q = query;
       if (tab === "diet" && disease) params.disease = disease;
+      if (tab === "drug" && doctorId) params.DoctorID = doctorId;
+      if (tab === "drug") params.force = String(force);
 
       const url = buildUrl(baseUrl, meta.endpoint, params);
       updateTabState(tab, { loading: true, error: null, response: undefined });
@@ -95,16 +97,16 @@ export default function TesterPage() {
   const handleSend = useCallback(
     (tab: ApiTab) => {
       const state = tabStates[tab];
-      sendRequest(tab, state.query, state.disease);
+      sendRequest(tab, state.query, state.disease, state.doctorId, state.force);
     },
     [tabStates, sendRequest]
   );
 
   const handleQuickFill = useCallback(
     (tab: ApiTab, value: string) => {
-      const disease = tabStates[tab].disease;
+      const state = tabStates[tab];
       updateTabState(tab, { query: value });
-      sendRequest(tab, value, disease);
+      sendRequest(tab, value, state.disease, state.doctorId, state.force);
     },
     [tabStates, updateTabState, sendRequest]
   );
@@ -192,9 +194,10 @@ export default function TesterPage() {
                   <RequestPanel
                     tab={tab}
                     state={tabStates[tab]}
-                    baseUrl={baseUrl}
                     onQueryChange={(v) => updateTabState(tab, { query: v })}
                     onDiseaseChange={(v) => updateTabState(tab, { disease: v })}
+                    onDoctorIdChange={(v) => updateTabState(tab, { doctorId: v })}
+                    onForceChange={(v) => updateTabState(tab, { force: v })}
                     onSend={() => handleSend(tab)}
                     onQuickFill={(v) => handleQuickFill(tab, v)}
                   />
@@ -202,7 +205,7 @@ export default function TesterPage() {
 
                 {/* Right: Response Panel + Diet Templates */}
                 <div className="space-y-5">
-                  <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm min-h-[280px]">
+                  <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm min-h-70">
                     <ResponsePanel
                       tab={tab}
                       state={tabStates[tab]}

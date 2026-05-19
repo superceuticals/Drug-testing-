@@ -76,18 +76,20 @@ export const TAB_META: Record<ApiTab, TabMeta> = {
   drug: {
     label: "Drug / Medicine",
     icon: Pill,
-    endpoint: "/drugSuggestion/new-search",
+    endpoint: "/drugSuggestion/new-search-global",
     method: "GET",
     description:
-      "Search drugs by product or generic name. Timeout is 300 s — large drug database. Field names vary: prodName, genericName, name.",
+      "Search drugs by product or generic name. Pass DoctorID for a personalised formulary. Field names vary: prodName, genericName, name.",
     hasQuery: true,
-    placeholder: "e.g. paracetamol, metformin, amoxicillin",
+    placeholder: "e.g. paracetamol, metformin, amoxicillin, combi",
     colorClass: "text-orange-500",
     accentBg: "bg-orange-50",
     accentBorder: "border-orange-200",
     accentText: "text-orange-700",
     params: [
       { name: "q", type: "string", required: true, description: "Drug product name or generic name" },
+      { name: "DoctorID", type: "string", required: false, description: "Doctor ID for personalised drug list (e.g. DC26C000001)" },
+      { name: "force", type: "boolean", required: false, description: "Force cache refresh — default false" },
     ],
   },
   diet: {
