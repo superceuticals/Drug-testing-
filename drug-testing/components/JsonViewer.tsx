@@ -10,7 +10,7 @@ export function JsonViewer({ data }: JsonViewerProps) {
 
   return (
     <pre
-      className="text-xs leading-relaxed p-4 rounded-lg  bg-zinc-950 text-zinc-100 overflow-auto"
+      className="text-xs leading-relaxed p-4  rounded-lg bg-zinc-950 text-zinc-100 overflow-auto"
       style={{ fontFamily: "var(--font-jetbrains), ui-monospace, monospace" }}
       dangerouslySetInnerHTML={{ __html: highlighted }}
     />

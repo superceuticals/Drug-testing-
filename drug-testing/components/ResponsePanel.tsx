@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2, Copy, Trash2, AlertCircle, ArrowRight } from "lucide-react";
 import type { ApiTab } from "@/constants/tabs";
 import type { TabState } from "@/types";
 import { JsonViewer } from "./JsonViewer";
-import { ParsedPreview } from "./ParsedPreview";
 
 function countResults(data: unknown): number | null {
   if (!data || typeof data !== "object") return null;
@@ -25,7 +23,6 @@ interface ResponsePanelProps {
 
 export function ResponsePanel({ tab, state, onClear }: ResponsePanelProps) {
   const { loading, response, status, statusText, timing, error } = state;
-  const [viewMode, setViewMode] = useState<"preview" | "raw">("preview");
 
   const handleCopy = () => {
     navigator.clipboard.writeText(JSON.stringify(response, null, 2));
@@ -121,39 +118,9 @@ export function ResponsePanel({ tab, state, onClear }: ResponsePanelProps) {
         </div>
       </div>
 
-      {/* View toggle */}
-      <div className="flex items-center gap-1 p-0.5 bg-zinc-100 rounded-lg w-fit border border-zinc-200">
-        <button
-          onClick={() => setViewMode("preview")}
-          className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-            viewMode === "preview"
-              ? "bg-white text-blue-600 shadow-sm border border-zinc-200"
-              : "text-zinc-500 hover:text-zinc-700"
-          }`}
-        >
-          UI Preview
-        </button>
-        <button
-          onClick={() => setViewMode("raw")}
-          className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-            viewMode === "raw"
-              ? "bg-white text-zinc-700 shadow-sm border border-zinc-200"
-              : "text-zinc-500 hover:text-zinc-700"
-          }`}
-        >
-          Raw JSON
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="overflow-auto max-h-[480px] rounded-lg">
-        {viewMode === "raw" ? (
-          <JsonViewer data={response} />
-        ) : (
-          <div className="space-y-1">
-            <ParsedPreview tab={tab} data={response} />
-          </div>
-        )}
+      {/* JSON Viewer */}
+      <div className="overflow-auto max-h-[420px] rounded-lg">
+        <JsonViewer data={response} />
       </div>
     </div>
   );
