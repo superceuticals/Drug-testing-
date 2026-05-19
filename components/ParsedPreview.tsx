@@ -8,6 +8,7 @@ import type { ApiTab } from "@/constants/tabs";
 interface DrugItem {
   name: string;
   composition: string;
+  form: string;
   strengthLine: string;
   inn: string;
   drugClass: string;
@@ -48,10 +49,11 @@ function getDrugItems(data: unknown): DrugItem[] {
     if (!raw || typeof raw !== "object") return [];
     const item = raw as Record<string, unknown>;
     const name = String(item.prodName ?? item.genericName ?? item.name ?? item.medicine ?? item.DrugID ?? "");
-    const rawComp = item.composition;
+    const rawComp = item.composition ?? item.contains;
     const composition = Array.isArray(rawComp)
       ? (rawComp as unknown[]).filter(Boolean).map(String).join(", ")
       : String(rawComp ?? "").trim();
+    const form = String(item.Form ?? item.form ?? "").trim();
     const strengths = Array.isArray(item.strengths) ? item.strengths : [];
     const vals = (strengths as Record<string, unknown>[])
       .map((s) => String(s?.valueRaw ?? s?.value ?? ""))
@@ -60,7 +62,7 @@ function getDrugItems(data: unknown): DrugItem[] {
     const strengthLine = vals.length ? `${vals.join(", ")} ${unit}`.trim() : "";
     const inn = String(item.inn_name ?? item.innName ?? item.inn ?? "");
     const drugClass = String(item.drugClass ?? "");
-    return [{ name, composition, strengthLine, inn, drugClass }];
+    return [{ name, composition, form, strengthLine, inn, drugClass }];
   });
 }
 
@@ -94,6 +96,28 @@ function getAdviceTemplates(data: unknown): AdviceCategory[] {
       emergency: Array.isArray(item.emergency) ? (item.emergency as unknown[]).map(String) : [],
     }];
   });
+}
+
+interface LabOrderMeta {
+  tests: string[];
+  count: number;
+  query: string;
+  mode: string;
+}
+
+function getLabOrderMeta(data: unknown): LabOrderMeta {
+  const empty: LabOrderMeta = { tests: [], count: 0, query: "", mode: "" };
+  if (!data || typeof data !== "object") return empty;
+  const d = data as Record<string, unknown>;
+  const tests = Array.isArray(d.mergedAndSortedArray)
+    ? (d.mergedAndSortedArray as unknown[]).filter((v) => typeof v === "string").map(String)
+    : [];
+  return {
+    tests,
+    count: typeof d.count === "number" ? d.count : tests.length,
+    query: String(d.query ?? ""),
+    mode: String(d.mode ?? ""),
+  };
 }
 
 function getAdviceSearch(data: unknown): { categories: AdviceCategory[]; items: Array<{ text: string; categoryName: string; isEmergency: boolean }> } {
@@ -329,27 +353,31 @@ function DrugView({ data }: { data: unknown }) {
                     <p className="text-xs text-zinc-400 truncate">{item.composition}</p>
                   )}
                 </div>
-                <div className="text-right text-xs text-zinc-300 italic shrink-0 space-y-0.5">
+                {/* <div className="text-right text-xs text-zinc-300 italic shrink-0 space-y-0.5">
                   <p>1-0-1</p>
                   <p>After Food</p>
                   <p>5 Days</p>
-                </div>
+                </div> */}
               </div>
-              {(item.strengthLine || item.inn || item.drugClass) && (
+              {(item.form || item.strengthLine || item.inn || item.drugClass) && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
+                  {item.form && <PillBadge>Form: {item.form}</PillBadge>}
                   {item.strengthLine && <PillBadge>Strength: {item.strengthLine}</PillBadge>}
                   {item.inn && <PillBadge>INN: {item.inn}</PillBadge>}
                   {item.drugClass && <PillBadge>Class: {item.drugClass}</PillBadge>}
                 </div>
               )}
             </div>
-            <div className="px-3 py-1.5 bg-zinc-50 border-t border-zinc-100">
+            {/* <div className="px-3 py-1.5 bg-zinc-50 border-t border-zinc-100">
               <p className="text-[10px] text-zinc-400 uppercase tracking-wide mb-0.5">Dropdown item</p>
               <p className="text-xs font-medium text-zinc-700">{item.name}</p>
+              {item.form && (
+                <p className="text-xs text-zinc-500">{item.form}</p>
+              )}
               {item.composition && (
                 <p className="text-xs text-zinc-400">{item.composition}</p>
               )}
-            </div>
+            </div> */}
           </div>
         ))}
         {rest > 0 && (
@@ -386,12 +414,11 @@ function AdviceTemplatesView({ data }: { data: unknown }) {
   const cats = getAdviceTemplates(data);
   if (!cats.length) return <EmptyState msg="No advice categories extracted from response" />;
 
-  const allItems = cats.flatMap((c) => c.items);
-  const allEmergency = cats.flatMap((c) => c.emergency.map((e) => `Emergency: ${e}`));
-  const storedSample = [...allItems.slice(0, 3), ...allEmergency.slice(0, 1)];
+  const totalItems = cats.reduce((n, c) => n + c.items.length + c.emergency.length, 0);
 
   return (
     <div className="space-y-4">
+      {/* Category chips */}
       <div>
         <SectionTitle>Category chips ({cats.length})</SectionTitle>
         <div className="flex flex-wrap gap-2">
@@ -408,21 +435,32 @@ function AdviceTemplatesView({ data }: { data: unknown }) {
         </p>
       </div>
 
+      {/* Full item dropdown list grouped by category */}
       <div>
-        <SectionTitle>Selected badges preview</SectionTitle>
-        <div className="flex flex-wrap gap-2">
-          {cats.flatMap((cat) => [
-            ...cat.items.slice(0, 2).map((text, i) => (
-              <TagBadge key={`item-${i}`} label={text.length > 40 ? text.slice(0, 40) + "…" : text} />
-            )),
-            ...cat.emergency.slice(0, 1).map((text, i) => (
-              <TagBadge key={`emg-${i}`} label={text.length > 35 ? text.slice(0, 35) + "…" : text} variant="emergency" />
-            )),
-          ]).slice(0, 6)}
+        <SectionTitle>All advice items ({totalItems} total)</SectionTitle>
+        <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white divide-y divide-zinc-100">
+          {cats.map((cat, ci) => (
+            <div key={cat.categoryId || ci}>
+              <div className="px-3 py-1.5 bg-zinc-50 border-b border-zinc-100">
+                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">
+                  {cat.category}
+                </p>
+              </div>
+              {cat.items.map((text, ii) => (
+                <div key={`i-${ci}-${ii}`} className="px-3 py-2 text-sm text-zinc-700">
+                  {text}
+                </div>
+              ))}
+              {cat.emergency.map((text, ei) => (
+                <div key={`e-${ci}-${ei}`} className="px-3 py-2 text-sm text-red-600 flex items-start gap-1.5">
+                  <span className="mt-0.5 shrink-0">⚠</span>
+                  {text}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
-
-      {/* <StoredArrayPreview items={storedSample} /> */}
     </div>
   );
 }
@@ -473,6 +511,39 @@ function AdviceSearchView({ data }: { data: unknown }) {
   );
 }
 
+function LabOrderView({ data }: { data: unknown }) {
+  const [expanded, setExpanded] = useState(false);
+  const { tests, count, query, mode } = getLabOrderMeta(data);
+  if (!tests.length) return <EmptyState msg="No lab tests extracted from response" />;
+  const pageSize = 8;
+  const shown = expanded ? tests : tests.slice(0, pageSize);
+  const rest = tests.length - pageSize;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <SectionTitle>
+          Suggestion dropdown — mergedAndSortedArray ({count} total · max {pageSize} shown)
+        </SectionTitle>
+        <div className="flex gap-1.5 mb-2">
+          {query && <PillBadge>query: {query}</PillBadge>}
+          {mode && <PillBadge>mode: {mode}</PillBadge>}
+        </div>
+      </div>
+      <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white divide-y divide-zinc-100">
+        {shown.map((test, i) => (
+          <div key={i} className="px-3 py-2 text-sm text-zinc-700">
+            {test}
+          </div>
+        ))}
+      </div>
+      {rest > 0 && (
+        <ShowMoreButton count={rest} expanded={expanded} onToggle={() => setExpanded((v) => !v)} />
+      )}
+    </div>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 interface ParsedPreviewProps {
@@ -494,6 +565,8 @@ export function ParsedPreview({ tab, data }: ParsedPreviewProps) {
       return <AdviceTemplatesView data={data} />;
     case "advice-search":
       return <AdviceSearchView data={data} />;
+    case "lab-order":
+      return <LabOrderView data={data} />;
     default:
       return null;
   }

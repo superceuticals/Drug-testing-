@@ -73,12 +73,14 @@ export default function TesterPage() {
       }
 
       const params: Record<string, string> = {};
-      if (meta.hasQuery && query) params.q = query;
+      if (meta.hasQuery && query && tab !== "lab-order") params.q = query;
       if (tab === "diet" && disease) params.disease = disease;
       if (tab === "drug" && doctorId) params.DoctorID = doctorId;
       if (tab === "drug") params.force = String(force);
 
-      const url = buildUrl(baseUrl, meta.endpoint, params);
+      // lab-order uses a path-param URL: /labTestSuggestion/getNew/{query}
+      const pathParam = tab === "lab-order" ? query : undefined;
+      const url = buildUrl(baseUrl, meta.endpoint, params, pathParam);
       updateTabState(tab, { loading: true, error: null, response: undefined });
 
       const result = await callApi(url, token);

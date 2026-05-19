@@ -5,6 +5,7 @@ import {
   Apple,
   BookOpen,
   Search,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -14,7 +15,8 @@ export type ApiTab =
   | "drug"
   | "diet"
   | "advice-templates"
-  | "advice-search";
+  | "advice-search"
+  | "lab-order";
 
 export interface TabParam {
   name: string;
@@ -147,6 +149,23 @@ export const TAB_META: Record<ApiTab, TabMeta> = {
       { name: "q", type: "string", required: true, description: "Search keyword for advice items" },
     ],
   },
+  "lab-order": {
+    label: "Lab Order",
+    icon: FlaskConical,
+    endpoint: "/labTestSuggestion/getNew",
+    method: "GET",
+    description:
+      "Search lab tests by name or abbreviation. Query is passed as a path segment: /labTestSuggestion/getNew/{query}.",
+    hasQuery: true,
+    placeholder: "e.g. CBC, HbA1c, lipid, urine routine, thyroid",
+    colorClass: "text-violet-500",
+    accentBg: "bg-violet-50",
+    accentBorder: "border-violet-200",
+    accentText: "text-violet-700",
+    params: [
+      { name: "query", type: "string (path)", required: true, description: "Lab test name or abbreviation — appended as a URL path segment" },
+    ],
+  },
 };
 
 export const ALL_TABS: ApiTab[] = [
@@ -154,6 +173,7 @@ export const ALL_TABS: ApiTab[] = [
   "complaint",
   "drug",
   "diet",
-  "advice-templates",
+  // "advice-templates",
   "advice-search",
+  "lab-order",
 ];

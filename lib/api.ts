@@ -14,11 +14,12 @@ export async function callApi(
       method: "GET",
       headers: { Authorization: "Bearer " + token },
     });
+    const text = await res.text();
     let data: unknown;
     try {
-      data = await res.json();
+      data = JSON.parse(text);
     } catch {
-      data = { raw: await res.text() };
+      data = { raw: text };
     }
     return {
       data,
@@ -41,10 +42,13 @@ export async function callApi(
 export function buildUrl(
   baseUrl: string,
   endpoint: string,
-  params: Record<string, string>
+  params: Record<string, string>,
+  pathParam?: string
 ): string {
   const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  const url = new URL(endpoint, base + "/");
+  // pathParam is appended as a path segment, e.g. /labTestSuggestion/getNew/{query}
+  const fullEndpoint = pathParam ? `${endpoint}/${encodeURIComponent(pathParam)}` : endpoint;
+  const url = new URL(fullEndpoint, base + "/");
   Object.entries(params).forEach(([k, v]) => {
     if (v) url.searchParams.set(k, v);
   });
