@@ -120,7 +120,7 @@ export const TAB_META: Record<ApiTab, TabMeta> = {
   "advice-templates": {
     label: "Advice Templates",
     icon: BookOpen,
-    endpoint: "/advice/enc/templates",
+    endpoint: "/advice/templates",
     method: "GET",
     description:
       "Fetch all advice templates grouped by category. No query params needed. Returns the full template library.",
@@ -135,7 +135,7 @@ export const TAB_META: Record<ApiTab, TabMeta> = {
   "advice-search": {
     label: "Advice Search",
     icon: Search,
-    endpoint: "/advice/enc/search",
+    endpoint: "/advice/search",
     method: "GET",
     description:
       "Search advice items across all categories. Returns matched items with category context and emergency flag.",
