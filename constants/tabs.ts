@@ -173,7 +173,7 @@ export const ALL_TABS: ApiTab[] = [
   "complaint",
   "drug",
   "diet",
-  // "advice-templates",
+  "advice-templates",
   "advice-search",
   "lab-order",
 ];
