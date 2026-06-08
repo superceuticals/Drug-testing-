@@ -47,7 +47,7 @@ export function ConfigPanel({
                 onChange={(e) => onBaseUrlChange(e.target.value)}
                 className="flex-1 text-sm px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-zinc-50"
                 style={{ fontFamily: "var(--font-jetbrains), ui-monospace, monospace" }}
-                placeholder="http://localhost:2001"
+                placeholder="https://qa.sc.superceuticals.in"
               />
               <div className="flex gap-1">
                 {(["local", "qa", "prod"] as const).map((preset) => (
@@ -80,7 +80,7 @@ export function ConfigPanel({
                   onChange={(e) => onTokenChange(e.target.value)}
                   className="w-full text-sm px-3 py-2 pr-9 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-zinc-50"
                   style={{ fontFamily: "var(--font-jetbrains), ui-monospace, monospace" }}
-                  placeholder="Paste JWT token here…"
+                  placeholder="Auto-filled after login, or paste a JWT token…"
                 />
                 <button
                   onClick={onToggleToken}

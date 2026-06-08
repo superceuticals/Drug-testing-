@@ -39,6 +39,76 @@ export async function callApi(
   }
 }
 
+export interface LoginCredentials {
+  LabTechnicianID: string;
+  MachineID: string;
+  password: string;
+}
+
+export interface TechnicianInfo {
+  LabTechnicianID?: string;
+  CentreID?: string;
+  Name?: string;
+  MachineID?: string;
+  Address?: string;
+  designation?: string;
+}
+
+export async function login(
+  baseUrl: string,
+  credentials: LoginCredentials
+): Promise<{
+  token: string | null;
+  info: TechnicianInfo | null;
+  data: unknown;
+  error: string | null;
+}> {
+  const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  try {
+    const res = await fetch("https://api.superceuticals.in/technicians/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    const text = await res.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+    const body = (data ?? {}) as Record<string, unknown>;
+    if (!res.ok || body.error) {
+      return {
+        token: null,
+        info: null,
+        data,
+        error: (body.message as string) || `Login failed (${res.status})`,
+      };
+    }
+    return {
+      token: (body.token as string) ?? null,
+      info: {
+        LabTechnicianID: body.LabTechnicianID as string,
+        CentreID: body.CentreID as string,
+        Name: body.Name as string,
+        MachineID: body.MachineID as string,
+        Address: body.Address as string,
+        designation: body.designation as string,
+      },
+      data,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      token: null,
+      info: null,
+      data: null,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 export function buildUrl(
   baseUrl: string,
   endpoint: string,

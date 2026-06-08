@@ -1,14 +1,24 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Zap, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Zap, Settings, LogOut, Loader2, UserCheck } from "lucide-react";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import { RequestPanel } from "@/components/RequestPanel";
 import { ResponsePanel } from "@/components/ResponsePanel";
 import { DietTemplateViewer } from "@/components/DietTemplateViewer";
 import { TAB_META, ALL_TABS, type ApiTab } from "@/constants/tabs";
 import { type TabState, initialTabState } from "@/types";
-import { callApi, buildUrl } from "@/lib/api";
+import { callApi, buildUrl, type TechnicianInfo } from "@/lib/api";
+import {
+  isTokenValid,
+  getStoredToken,
+  getStoredTechnician,
+  getStoredBaseUrl,
+  clearAuth,
+  STORAGE_KEYS,
+  DEFAULT_API_URL,
+} from "@/lib/auth";
 
 const PRESETS = {
   local: "http://localhost:2001",
@@ -23,12 +33,12 @@ function makeInitialTabStates(): Record<ApiTab, TabState> {
 }
 
 export default function TesterPage() {
-  const [baseUrl, setBaseUrl] = useState(
-    process.env.NEXT_PUBLIC_DEFAULT_API_URL ?? "https://qa.sc.superceuticals.in"
-  );
-  const [token, setToken] = useState(
-    process.env.NEXT_PUBLIC_DEFAULT_TOKEN ?? ""
-  );
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  const [baseUrl, setBaseUrl] = useState(DEFAULT_API_URL);
+  const [token, setToken] = useState("");
+  const [technician, setTechnician] = useState<TechnicianInfo | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [tokenVisible, setTokenVisible] = useState(false);
   const [configSaved, setConfigSaved] = useState(false);
@@ -37,16 +47,28 @@ export default function TesterPage() {
   const [tabStates, setTabStates] = useState<Record<ApiTab, TabState>>(makeInitialTabStates);
   const [selectedTemplate, setSelectedTemplate] = useState("");
 
+  // On first load, gate the page behind a valid (non-expired) token.
   useEffect(() => {
-    const savedUrl = localStorage.getItem("sc_api_url");
-    const savedToken = localStorage.getItem("sc_api_token");
-    if (savedUrl) setBaseUrl(savedUrl);
-    if (savedToken) setToken(savedToken);
-  }, []);
+    const savedToken = getStoredToken();
+    if (!isTokenValid(savedToken)) {
+      clearAuth();
+      router.replace("/login");
+      return;
+    }
+    setToken(savedToken as string);
+    setBaseUrl(getStoredBaseUrl());
+    setTechnician(getStoredTechnician());
+    setAuthChecked(true);
+  }, [router]);
+
+  const handleLogout = useCallback(() => {
+    clearAuth();
+    router.replace("/login");
+  }, [router]);
 
   const handleSaveConfig = useCallback(() => {
-    localStorage.setItem("sc_api_url", baseUrl.trim().replace(/\/$/, ""));
-    localStorage.setItem("sc_api_token", token.trim());
+    localStorage.setItem(STORAGE_KEYS.url, baseUrl.trim().replace(/\/$/, ""));
+    localStorage.setItem(STORAGE_KEYS.token, token.trim());
     setConfigSaved(true);
     setTimeout(() => setConfigSaved(false), 2000);
   }, [baseUrl, token]);
@@ -63,12 +85,10 @@ export default function TesterPage() {
     async (tab: ApiTab, query: string, disease: string, doctorId: string, force: boolean) => {
       const meta = TAB_META[tab];
 
-      if (!token.trim()) {
-        setConfigOpen(true);
-        updateTabState(tab, {
-          error: "No Bearer token — open Config and paste your JWT token.",
-          loading: false,
-        });
+      // Token expired mid-session → send the user back to login.
+      if (!isTokenValid(token)) {
+        clearAuth();
+        router.replace("/login");
         return;
       }
 
@@ -84,6 +104,14 @@ export default function TesterPage() {
       updateTabState(tab, { loading: true, error: null, response: undefined });
 
       const result = await callApi(url, token);
+
+      // Server rejected the token → expired/invalid, force re-login.
+      if (result.status === 401) {
+        clearAuth();
+        router.replace("/login");
+        return;
+      }
+
       updateTabState(tab, {
         loading: false,
         response: result.data,
@@ -93,7 +121,7 @@ export default function TesterPage() {
         error: result.error,
       });
     },
-    [token, baseUrl, updateTabState]
+    [token, baseUrl, updateTabState, router]
   );
 
   const handleSend = useCallback(
@@ -113,7 +141,14 @@ export default function TesterPage() {
     [tabStates, updateTabState, sendRequest]
   );
 
-  const hasToken = !!token.trim();
+  // Don't render the tester until we've confirmed a valid token (avoids a flash).
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+        <Loader2 className="animate-spin text-blue-600" size={28} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col">
@@ -124,21 +159,23 @@ export default function TesterPage() {
           <span className="font-semibold text-zinc-900 text-sm">SC API Tester</span>
         </div>
         <div className="flex items-center gap-3">
-          <span
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
-              hasToken ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-500"
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${hasToken ? "bg-green-500" : "bg-zinc-400"}`}
-            />
-            {hasToken ? "Token set" : "No token"}
-          </span>
+          {technician?.Name && (
+            <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700">
+              <UserCheck size={13} /> {technician.Name}
+              {technician.MachineID ? ` · ${technician.MachineID}` : ""}
+            </span>
+          )}
           <button
             onClick={() => setConfigOpen(!configOpen)}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors text-zinc-600 font-medium"
           >
             <Settings size={13} /> Config {configOpen ? "▲" : "▾"}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-red-200 rounded-lg hover:bg-red-50 transition-colors text-red-600 font-medium"
+          >
+            <LogOut size={13} /> Logout
           </button>
         </div>
       </header>
