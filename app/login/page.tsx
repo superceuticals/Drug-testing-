@@ -89,7 +89,7 @@ export default function LoginPage() {
 
         <div className="space-y-4">
           {/* Environment */}
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
               Environment
             </label>
@@ -109,12 +109,12 @@ export default function LoginPage() {
                 </button>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* Credentials */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              LabTechnicianID
+              Testing ID
             </label>
             <input
               type="text"

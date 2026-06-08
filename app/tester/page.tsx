@@ -159,12 +159,12 @@ export default function TesterPage() {
           <span className="font-semibold text-zinc-900 text-sm">SC API Tester</span>
         </div>
         <div className="flex items-center gap-3">
-          {technician?.Name && (
+          {/* {technician?.Name && (
             <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700">
               <UserCheck size={13} /> {technician.Name}
               {technician.MachineID ? ` · ${technician.MachineID}` : ""}
             </span>
-          )}
+          )} */}
           <button
             onClick={() => setConfigOpen(!configOpen)}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors text-zinc-600 font-medium"
