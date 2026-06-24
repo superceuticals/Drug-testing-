@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Loader2, X, RefreshCw } from "lucide-react";
 import { TAB_META, type ApiTab } from "@/constants/tabs";
 import { QUICK_FILLS } from "@/constants/quickFills";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type { TabState } from "@/types";
 
 const DISEASE_OPTIONS = ["Diabetes", "Hypertension", "PCOS", "Cancer", "Anemia", "Thyroid"];
@@ -33,51 +34,23 @@ export function RequestPanel({
   const meta = TAB_META[tab];
   const quickFills = QUICK_FILLS[tab];
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressRef = useRef(false);
-  const diseaseMounted = useRef(false);
-  const doctorIdMounted = useRef(false);
-  const forceMounted = useRef(false);
+  const mountedRef = useRef(false);
 
-  // Auto-search with debounce when query changes
+  const [debouncedSend, cancelSend] = useDebouncedCallback(onSend, DEBOUNCE_MS);
+
+  // Auto-search with debounce whenever any search input changes
+  // (query text, plus the per-tab params: disease, DoctorID, force).
   useEffect(() => {
-    if (!meta.hasQuery || !state.query.trim()) return;
-    if (suppressRef.current) return;
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onSend(), DEBOUNCE_MS);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [state.query]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Re-fire immediately when disease changes (diet tab)
-  useEffect(() => {
-    if (!diseaseMounted.current) { diseaseMounted.current = true; return; }
-    if (tab !== "diet" || !state.query.trim()) return;
-    onSend();
-  }, [state.disease]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Re-fire with debounce when DoctorID changes (drug tab)
-  useEffect(() => {
-    if (!doctorIdMounted.current) { doctorIdMounted.current = true; return; }
-    if (tab !== "drug" || !state.query.trim()) return;
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onSend(), DEBOUNCE_MS);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [state.doctorId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Re-fire immediately when force toggles (drug tab)
-  useEffect(() => {
-    if (!forceMounted.current) { forceMounted.current = true; return; }
-    if (tab !== "drug" || !state.query.trim()) return;
-    onSend();
-  }, [state.force]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    // Don't fire (and drop any pending search) when there's nothing to search
+    // for, or when a quick-fill is driving the change itself.
+    if (!meta.hasQuery || !state.query.trim() || suppressRef.current) {
+      cancelSend();
+      return;
+    }
+    debouncedSend();
+  }, [state.query, state.disease, state.doctorId, state.force]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQuickFill = (fill: string) => {
     suppressRef.current = true;
